@@ -6,7 +6,7 @@ const port = process.env.PORT || 3000;
 
 /*
   ? TODOS:
-  ? tutor, admin, profile settings, logout(dashboard), then all the mainlayout design, payment/revenue/reports
+  ? then all the mainlayout design, payment/revenue/reports
 */
 
 const admin = require("firebase-admin");
@@ -107,6 +107,21 @@ async function run() {
       const result = await usersCollection.findOne({ email: req.tokenEmail });
       res.send({ role: result?.role });
     })
+    app.patch('/users/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const { name, photo } = req.body;
+      
+      const filter = { email: email };
+      const updateDoc = {
+        $set: {
+          name: name,
+          image: photo
+        }
+      };
+
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
 
     //* student dashboard related api
     app.post('/tuitions', verifyJWT, verifyStudent, async (req, res) => {
