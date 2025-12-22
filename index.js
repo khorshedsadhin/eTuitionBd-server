@@ -154,6 +154,22 @@ async function run() {
       res.send(result);
     });
 
+    //* tutor dashboard related api
+    app.get('/tutor/applications', verifyJWT, verifyTutor, async (req, res) => {
+      const query = { tutorEmail: req.tokenEmail };
+      const result = await applicationsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get('/tutor/ongoing-tuitions', verifyJWT, verifyTutor, async (req, res) => {
+      const query = { 
+        tutorEmail: req.tokenEmail,
+        status: 'accepted' 
+      };
+      const result = await applicationsCollection.find(query).toArray();
+      res.send(result);
+    });
+    
 
 
 		// Send a ping to confirm a successful connection
