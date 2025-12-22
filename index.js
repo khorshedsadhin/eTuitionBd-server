@@ -23,7 +23,7 @@ const app = express();
 //* middleware
 app.use(
 	cors({
-		origin: [process.env.CLIENT_DOMAIN],
+		origin: ['http://localhost:5173', process.env.CLIENT_DOMAIN],
 		credentials: true,
 		optionSuccessStatus: 200,
 	})
