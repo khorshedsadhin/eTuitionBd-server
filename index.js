@@ -6,7 +6,7 @@ const port = process.env.PORT || 3000;
 
 /*
   ? TODOS:
-  ? tutor, admin, profile settings, logout(dashboard), then all the mainlayout design, payment & revenue
+  ? tutor, admin, profile settings, logout(dashboard), then all the mainlayout design, payment/revenue/reports
 */
 
 const admin = require("firebase-admin");
@@ -169,7 +169,31 @@ async function run() {
       const result = await applicationsCollection.find(query).toArray();
       res.send(result);
     });
-    
+
+    //* admin dashboard related api
+    app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.patch('/users/role/:id', verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const { role } = req.body; // 'admin', 'tutor', 'student'
+      
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: { role: role }
+      };
+
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    app.get('/tuitions/all', verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await tuitionsCollection.find().toArray();
+      res.send(result);
+    });
+
 
 
 		// Send a ping to confirm a successful connection
