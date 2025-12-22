@@ -56,30 +56,29 @@ async function run() {
 	try {
     const db = client.db("eTuitionBD");
     const usersCollection = db.collection("users");
+    const tuitionsCollection = db.collection("tuitions");
+    const applicationsCollection = db.collection("applications");
 
     // role base middleware
     const verifyAdmin = async(req, res, next) => {
       const email = req.tokenEmail;
       const user = await usersCollection.findOne({ email });
 
-      if(user?.role !== 'admin') return res.status(403);
-      send({ message: "Admin only actions!" });
+      if(user?.role !== 'admin') return res.status(403).send({ message: "Admin only actions!" });
       next();
     }
     const verifyStudent = async(req, res, next) => {
       const email = req.tokenEmail;
       const user = await usersCollection.findOne({ email });
 
-      if(user?.role !== 'student') return res.status(403);
-      send({ message: "Student only actions!" });
+      if(user?.role !== 'student') return res.status(403).send({ message: "Student only actions!" });
       next();
     } 
     const verifyTutor = async(req, res, next) => {
       const email = req.tokenEmail;
       const user = await usersCollection.findOne({ email });
 
-      if(user?.role !== 'tutor') return res.status(403);
-      send({ message: "Tutor only actions!" });
+      if(user?.role !== 'tutor') return res.status(403).send({ message: "Tutor only actions!" });
       next();
     }
 
@@ -109,10 +108,34 @@ async function run() {
       res.send({ role: result?.role });
     })
 
+    //* student dashboard related api
+    app.post('/tuitions', verifyJWT, verifyStudent, async (req, res) => {
+      const tuitionData = req.body;
 
+      const newTuition = {
+        ...tuitionData,
+        studentEmail: req.tokenEmail,
+        status: 'pending',
+        postedAt: new Date(),
+        applicantsCount: 0
+      }
 
+      const result = await tuitionsCollection.insertOne(newTuition);
+      res.send(result);
+    })
 
+    app.get('/my-tuitions', verifyJWT, verifyStudent, async (req, res) => {
+      const query = { studentEmail: req.tokenEmail };
+      const result = await tuitionsCollection.find(query).toArray();
+      res.send(result);
+    });
 
+    app.delete('/tuition/:id', verifyJWT, verifyStudent, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await tuitionsCollection.deleteOne(query);
+      res.send(result);
+    });
 
 
 
