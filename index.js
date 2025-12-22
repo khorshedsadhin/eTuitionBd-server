@@ -6,12 +6,21 @@ const port = process.env.PORT || 3000;
 
 /*
   ? TODOS:
-  ? 1. jwt, axios, role base middleware, dashboard role based, student, tutor, admin, then all the mainlayout design
+  ? { axios, role base middleware, dashboard role based, student }, tutor, admin, then all the mainlayout design, private route
 */
+
+const admin = require("firebase-admin");
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString(
+	"utf-8"
+);
+const serviceAccount = JSON.parse(decoded);
+admin.initializeApp({
+	credential: admin.credential.cert(serviceAccount),
+});
 
 const app = express();
 
-// middleware
+//* middleware
 app.use(
 	cors({
 		origin: [process.env.CLIENT_DOMAIN],
@@ -20,6 +29,21 @@ app.use(
 	})
 );
 app.use(express.json());
+// jwt middlewares
+const verifyJWT = async (req, res, next) => {
+	const token = req?.headers?.authorization?.split(" ")[1];
+	console.log(token);
+	if (!token) return res.status(401).send({ message: "Unauthorized Access!" });
+	try {
+		const decoded = await admin.auth().verifyIdToken(token);
+		req.tokenEmail = decoded.email;
+		console.log(decoded);
+		next();
+	} catch (err) {
+		console.log(err);
+    return res.status(401).send({ message: "Unauthorized Access!", err });
+	}
+};
 
 const client = new MongoClient(process.env.MONGODB_URI, {
 	serverApi: {
