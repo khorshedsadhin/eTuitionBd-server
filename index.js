@@ -156,6 +156,19 @@ async function run() {
         totalPages: Math.ceil(total / limit)
       });
     });
+    app.get('/home/tuitions', async (req, res) => {
+      const result = await tuitionsCollection.find({ status: 'approved' })
+        .sort({ postedAt: -1 })
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
+    app.get('/home/tutors', async (req, res) => {
+      const result = await usersCollection.find({ role: 'tutor' })
+        .limit(4)
+        .toArray();
+      res.send(result);
+    });
 
     //* student dashboard related api
     app.post('/tuitions', verifyJWT, verifyStudent, async (req, res) => {
