@@ -123,6 +123,40 @@ async function run() {
       res.send(result);
     });
 
+    //* public api
+    app.get('/tutors', async (req, res) => {
+      const query = { role: 'tutor' };
+      const result = await usersCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.get('/tuitions', async (req, res) => {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 9;
+      const search = req.query.search || "";
+      const skip = (page - 1) * limit;
+      const query = {
+        status: 'approved',
+        $or: [
+            { subject: { $regex: search, $options: 'i' } },
+            { location: { $regex: search, $options: 'i' } }
+        ]
+      };
+
+      const result = await tuitionsCollection.find(query)
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+      
+      const total = await tuitionsCollection.countDocuments(query);
+
+      res.send({
+        tuitions: result,
+        total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit)
+      });
+    });
+
     //* student dashboard related api
     app.post('/tuitions', verifyJWT, verifyStudent, async (req, res) => {
       const tuitionData = req.body;
@@ -193,7 +227,7 @@ async function run() {
 
     app.patch('/users/role/:id', verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
-      const { role } = req.body; // 'admin', 'tutor', 'student'
+      const { role } = req.body;
       
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -206,6 +240,18 @@ async function run() {
 
     app.get('/tuitions/all', verifyJWT, verifyAdmin, async (req, res) => {
       const result = await tuitionsCollection.find().toArray();
+      res.send(result);
+    });
+    app.patch('/tuition/status/:id', verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
+      
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: { status: status }
+      };
+
+      const result = await tuitionsCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
 
