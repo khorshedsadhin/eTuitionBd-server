@@ -6,7 +6,7 @@ const port = process.env.PORT || 3000;
 
 /*
   ? TODOS:
-  ? { student }, tutor, admin, profile settings, logout(dashboard), then all the mainlayout design
+  ? tutor, admin, profile settings, logout(dashboard), then all the mainlayout design, payment & revenue
 */
 
 const admin = require("firebase-admin");
@@ -134,6 +134,23 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await tuitionsCollection.deleteOne(query);
+      res.send(result);
+    });
+    app.get('/applications/received', verifyJWT, verifyStudent, async (req, res) => {
+      const query = { studentEmail: req.tokenEmail };
+      const result = await applicationsCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.patch('/application/status/:id', verifyJWT, verifyStudent, async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
+      
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: { status: status }
+      };
+
+      const result = await applicationsCollection.updateOne(query, updateDoc);
       res.send(result);
     });
 
