@@ -291,7 +291,7 @@ async function run() {
     app.get('/tutor/ongoing-tuitions', verifyJWT, verifyTutor, async (req, res) => {
       const query = { 
         tutorEmail: req.tokenEmail,
-        status: 'accepted' 
+        status: 'approved'
       };
       const result = await applicationsCollection.find(query).toArray();
       res.send(result);
@@ -318,13 +318,23 @@ async function run() {
 
       res.send(result);
     });
+    app.get('/tutor/revenue/:email', verifyJWT, verifyTutor, async (req, res) => {
+        const query = { tutorEmail: req.params.email };
+        const result = await paymentsCollection.find(query).sort({ date: -1 }).toArray();
+        res.send(result);
+    });
 
     //* admin dashboard related api
     app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
-
+    app.delete('/users/:id', verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await usersCollection.deleteOne(query);
+      res.send(result);
+    });
     app.patch('/users/role/:id', verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const { role } = req.body;
@@ -353,6 +363,18 @@ async function run() {
 
       const result = await tuitionsCollection.updateOne(filter, updateDoc);
       res.send(result);
+    });
+    app.get('/admin/stats', verifyJWT, verifyAdmin, async (req, res) => {
+        const payments = await paymentsCollection.find().toArray();
+        const totalRevenue = payments.reduce((acc, curr) => acc + curr.amount, 0);
+
+        res.send({
+            totalRevenue
+        });
+    });
+    app.get('/admin/payments', verifyJWT, verifyAdmin, async (req, res) => {
+        const result = await paymentsCollection.find().sort({ date: -1 }).toArray();
+        res.send(result);
     });
 
 
