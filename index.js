@@ -58,6 +58,7 @@ async function run() {
     const usersCollection = db.collection("users");
     const tuitionsCollection = db.collection("tuitions");
     const applicationsCollection = db.collection("applications");
+    const paymentsCollection = db.collection("payments");
 
     // role base middleware
     const verifyAdmin = async(req, res, next) => {
@@ -183,6 +184,11 @@ async function run() {
     });
 
     //* student dashboard related api
+    app.get('/payments/:email', verifyJWT, verifyStudent, async (req, res) => {
+        const query = { studentEmail: req.params.email };
+        const result = await paymentsCollection.find(query).sort({ date: -1 }).toArray();
+        res.send(result);
+    });
     app.post('/tuitions', verifyJWT, verifyStudent, async (req, res) => {
       const tuitionData = req.body;
 
@@ -218,15 +224,44 @@ async function run() {
     app.patch('/application/status/:id', verifyJWT, verifyStudent, async (req, res) => {
       const id = req.params.id;
       const { status } = req.body;
-      
       const query = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: { status: status }
-      };
 
-      const result = await applicationsCollection.updateOne(query, updateDoc);
-      res.send(result);
+      if (status === 'rejected') {
+          const result = await applicationsCollection.updateOne(query, { $set: { status: 'rejected' } });
+          return res.send(result);
+      }
+
+      if (status === 'approved') {
+          const application = await applicationsCollection.findOne(query);
+
+          if (!application) return res.status(404).send({ message: "Application not found" });
+
+          const paymentRecord = {
+              studentEmail: application.studentEmail,
+              tutorEmail: application.tutorEmail,
+              tutorName: application.tutorName,
+              amount: application.expectedSalary,
+              subject: application.subject,
+              transactionId: `MANUAL_${new Date().getTime()}`,
+              date: new Date(),
+              applicationId: id,
+              tuitionId: application.tuitionId,
+              status: 'paid'
+          };
+
+          const paymentResult = await paymentsCollection.insertOne(paymentRecord);
+          const updateResult = await applicationsCollection.updateOne(query, { $set: { status: 'approved' } });
+          const tuitionQuery = { _id: new ObjectId(application.tuitionId) };
+          await tuitionsCollection.updateOne(tuitionQuery, { $set: { status: 'assigned' } });
+          await applicationsCollection.updateMany(
+            { tuitionId: application.tuitionId, status: 'pending' },
+            { $set: { status: 'rejected' } }
+          );
+
+          return res.send({ paymentResult, updateResult });
+      }
     });
+
     app.patch('/tuition/:id', verifyJWT, verifyStudent, async (req, res) => {
       const id = req.params.id;
       const item = req.body;
