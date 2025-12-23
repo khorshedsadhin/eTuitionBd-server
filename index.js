@@ -6,7 +6,7 @@ const port = process.env.PORT || 3000;
 
 /*
   ? TODOS:
-  ? then all the mainlayout design, payment/revenue/reports
+  ? payment/revenue/reports
 */
 
 const admin = require("firebase-admin");
@@ -169,6 +169,18 @@ async function run() {
         .toArray();
       res.send(result);
     });
+    app.get('/tuition/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await tuitionsCollection.findOne(query);
+      res.send(result);
+    });
+    app.get('/application/check/:tuitionId/:email', verifyJWT, async(req, res) => {
+       const { tuitionId, email } = req.params;
+       const query = { tuitionId, tutorEmail: email };
+       const result = await applicationsCollection.findOne(query);
+       res.send({ applied: !!result });
+    });
 
     //* student dashboard related api
     app.post('/tuitions', verifyJWT, verifyStudent, async (req, res) => {
@@ -247,6 +259,28 @@ async function run() {
         status: 'accepted' 
       };
       const result = await applicationsCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.post('/applications', verifyJWT, verifyTutor, async (req, res) => {
+      const applicationData = req.body;
+      const query = { 
+        tuitionId: applicationData.tuitionId, 
+        tutorEmail: applicationData.tutorEmail 
+      };
+      const alreadyApplied = await applicationsCollection.findOne(query);
+      
+      if(alreadyApplied){
+        return res.status(400).send({ message: "You have already applied to this tuition." });
+      }
+
+      const result = await applicationsCollection.insertOne(applicationData);
+      
+      const updateDoc = {
+        $inc: { applicantsCount: 1 }
+      }
+      const tuitionQuery = { _id: new ObjectId(applicationData.tuitionId) };
+      await tuitionsCollection.updateOne(tuitionQuery, updateDoc);
+
       res.send(result);
     });
 
