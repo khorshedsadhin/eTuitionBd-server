@@ -23,7 +23,7 @@ const app = express();
 //* middleware
 app.use(
 	cors({
-		origin: ['http://localhost:5173', process.env.CLIENT_DOMAIN],
+		origin: ['http://localhost:3001', process.env.CLIENT_DOMAIN],
 		credentials: true,
 		optionSuccessStatus: 200,
 	})
@@ -213,6 +213,24 @@ async function run() {
       };
 
       const result = await applicationsCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+    app.patch('/tuition/:id', verifyJWT, verifyStudent, async (req, res) => {
+      const id = req.params.id;
+      const item = req.body;
+      const filter = { _id: new ObjectId(id) };
+      
+      const updatedDoc = {
+        $set: {
+          subject: item.subject,
+          class: item.class,
+          salary: item.salary,
+          days: item.days,
+          location: item.location,
+          description: item.description
+        }
+      }
+      const result = await tuitionsCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
 
